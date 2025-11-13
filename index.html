@@ -32,27 +32,26 @@
       to   { opacity: 1; }
     }
 
-    /* The clickable text behaves like a button but visually just text */
+    /* Button text */
     .museum-button {
       position: relative;
       border: none;
       background: none;
       cursor: pointer;
       font-family: "Times New Roman", Times, serif;
-      font-size: 0.8vw;
+      font-size: 4rem; /* change this to adjust size */
       color: #000000;
       text-transform: lowercase;
       outline: none;
       padding: 0;
     }
 
-    /* Two overlapping labels: one for default text, one for hover text */
     .museum-button span {
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      transition: opacity 0.5s ease;
+      transition: opacity 0.3s ease;
       white-space: nowrap;
     }
 
@@ -64,7 +63,6 @@
       opacity: 0;
     }
 
-    /* On hover: fade out main text, fade in "enter" */
     .museum-button:hover .label-main {
       opacity: 0;
     }
@@ -72,27 +70,92 @@
     .museum-button:hover .label-hover {
       opacity: 1;
     }
+
+    /* Map container (hidden at first) */
+    .map-container {
+      display: none;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      white-space: pre;
+      text-align: left;
+    }
+
+    /* For smaller screens, reduce font size a bit */
+    @media (max-width: 600px) {
+      .museum-button {
+        font-size: 2.5rem;
+      }
+      .map-container {
+        font-size: 0.75rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="fade-in">
-    <!-- 
-      This is the "button". 
-      To make it go somewhere, add JS or wrap it in <a href="...">.
-    -->
+  <!-- Intro button -->
+  <div class="fade-in" id="intro">
     <button class="museum-button" type="button">
       <span class="label-main">the grass museum</span>
       <span class="label-hover">enter</span>
     </button>
   </div>
 
-  <!-- Optional: simple JS hook if you want it to navigate somewhere -->
-  <!--
+  <!-- ASCII map appears after click -->
+  <div id="map-container" class="map-container">
+    <pre id="museum-map"></pre>
+  </div>
+
   <script>
-    document.querySelector(".museum-button").addEventListener("click", function () {
-      window.location.href = "home.html"; // change to your real URL
+    const intro = document.getElementById("intro");
+    const button = document.querySelector(".museum-button");
+    const mapContainer = document.getElementById("map-container");
+    const mapPre = document.getElementById("museum-map");
+
+    const mapText = `
+                ┌───────────────────┐
+                │                   │
+                │       HALL        │
+                │        ↑          │
+                │                   │
+                └────────┬──────────┘
+                         │
+                         │
+─────────────── HALL ◄───┼───► HALL ───────────────
+                         │
+                         │
+                ┌────────┴──────────┐
+                │                   │
+                │        ↓          │
+                │       HALL        │
+                │                   │
+                └───────────────────┘
+`;
+
+    function typeMap(text, element, speed) {
+      let index = 0;
+
+      function step() {
+        if (index <= text.length) {
+          element.textContent = text.slice(0, index);
+          index++;
+          setTimeout(step, speed);
+        }
+      }
+
+      step();
+    }
+
+    button.addEventListener("click", () => {
+      // Hide the button
+      intro.style.display = "none";
+
+      // Show the map container
+      mapContainer.style.display = "block";
+
+      // Start typing effect
+      typeMap(mapText, mapPre, 20); // 20 ms per character
     });
   </script>
-  -->
 </body>
 </html>
