@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>the grass museum</title>
+  <style>
+    /* Reset basic margins */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Full white background, center content */
+    body {
+      background-color: #ffffff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: "Times New Roman", Times, serif;
+    }
+
+    /* Wrapper for the button, so we can animate fade-in on load */
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 1.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* The clickable text behaves like a button but visually just text */
+    .museum-button {
+      position: relative;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: "Times New Roman", Times, serif;
+      font-size: 2rem;
+      color: #000000;
+      text-transform: lowercase;
+      outline: none;
+      padding: 0;
+    }
+
+    /* Two overlapping labels: one for default text, one for hover text */
+    .museum-button span {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.3s ease;
+      white-space: nowrap;
+    }
+
+    .museum-button .label-main {
+      opacity: 1;
+    }
+
+    .museum-button .label-hover {
+      opacity: 0;
+    }
+
+    /* On hover: fade out main text, fade in "enter" */
+    .museum-button:hover .label-main {
+      opacity: 0;
+    }
+
+    .museum-button:hover .label-hover {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="fade-in">
+    <!-- 
+      This is the "button". 
+      To make it go somewhere, add JS or wrap it in <a href="...">.
+    -->
+    <button class="museum-button" type="button">
+      <span class="label-main">the grass museum</span>
+      <span class="label-hover">enter</span>
+    </button>
+  </div>
+
+  <!-- Optional: simple JS hook if you want it to navigate somewhere -->
+  <!--
+  <script>
+    document.querySelector(".museum-button").addEventListener("click", function () {
+      window.location.href = "home.html"; // change to your real URL
+    });
+  </script>
+  -->
+</body>
+</html>
