@@ -39,7 +39,7 @@
       background: none;
       cursor: pointer;
       font-family: "Courier New", Courier, monospace;
-      font-size: 0.9rem; /* change this to adjust size */
+      font-size: 0.9rem;
       color: #000000;
       text-transform: lowercase;
       outline: none;
@@ -79,6 +79,8 @@
       line-height: 1.2;
       white-space: pre;
       text-align: left;
+      position: relative; /* needed for absolutely positioned overlay */
+      padding: 20px;
     }
 
     /* For smaller screens, reduce font size a bit */
@@ -90,6 +92,15 @@
         font-size: 0.75rem;
       }
     }
+
+    /* Simple layout for gallery images */
+    #gallery-images img {
+      width: 120px;
+      height: 80px;
+      object-fit: cover;
+      display: inline-block;
+    }
+
   </style>
 </head>
 <body>
@@ -104,14 +115,26 @@
   <!-- ASCII map appears after click -->
   <div id="map-container" class="map-container">
     <pre id="museum-map"></pre>
+
+    <!-- gallery images (hidden until needed) -->
+    <div id="gallery-images" style="display:none; opacity:0; transition: opacity 500ms ease; position:relative; margin-top:10px; text-align:center;">
+      <!-- replace src with real image paths -->
+      <img src="images/smog.jpeg" style="opacity:0; margin:6px;" alt="smog" />
+      <img src="images/thedivine.jpeg" style="opacity:0; margin:6px;" alt="the divine" />
+      <img src="images/theroom.jpeg" style="opacity:0; margin:6px;" alt="the room" />
+      <img src="images/tria.jpeg" style="opacity:0; margin:6px;" alt="tria" />
+    </div>
   </div>
 
   <script>
+    // --- Elements ---
     const intro = document.getElementById("intro");
     const button = document.querySelector(".museum-button");
     const mapContainer = document.getElementById("map-container");
     const mapPre = document.getElementById("museum-map");
+    const galleryImages = document.getElementById('gallery-images');
 
+    // --- Map text ---
     const mapText = `
                 ┌───────────────────┐
                 │                   │
@@ -132,30 +155,160 @@ EXIT───────────────  ◄───┼───► �
                 └───────────────────┘
 `;
 
-    function typeMap(text, element, speed) {
+    // --- Typing function ---
+    function typeMap(text, element, speed, onDone) {
+      element.textContent = '';
       let index = 0;
-
       function step() {
         if (index <= text.length) {
           element.textContent = text.slice(0, index);
           index++;
           setTimeout(step, speed);
+        } else if (typeof onDone === 'function') {
+          onDone();
         }
       }
-
       step();
     }
 
+    // --- Click to show map ---
     button.addEventListener("click", () => {
-      // Hide the button
       intro.style.display = "none";
-
-      // Show the map container
       mapContainer.style.display = "block";
-
-      // Start typing effect
-      typeMap(mapText, mapPre, 20); // 20 ms per character
+      // start typing faster (5ms per char)
+      typeMap(mapText, mapPre, 5, () => {
+        // after typing finishes create invisible overlay button over the word GALLERY
+        // use a robust char-measure approach (monospace assumption)
+        requestAnimationFrame(() => setTimeout(createGalleryOverlayByMetrics, 10));
+      });
     });
+
+    // --- Create overlay by measuring characters (more reliable than Range in some environments) ---
+    function createGalleryOverlayByMetrics() {
+      const txtNode = mapPre.firstChild;
+      if (!txtNode || txtNode.nodeType !== Node.TEXT_NODE) return;
+      const full = txtNode.textContent;
+      const targetWord = 'GALLERY';
+      // split lines correctly by newline character
+      const lines = full.split('\n');
+      let foundLine = -1;
+      let col = -1;
+      for (let i = 0; i < lines.length; i++) {
+        const idx = lines[i].indexOf(targetWord);
+        if (idx !== -1) {
+          foundLine = i;
+          col = idx;
+          break;
+        }
+      }
+      if (foundLine === -1) return;
+
+      // measure character size using a temporary span with the same font properties
+      const computed = window.getComputedStyle(mapPre);
+      const meas = document.createElement('span');
+      meas.textContent = 'M';
+      meas.style.fontFamily = computed.fontFamily;
+      meas.style.fontSize = computed.fontSize;
+      meas.style.visibility = 'hidden';
+      meas.style.position = 'absolute';
+      meas.style.whiteSpace = 'nowrap';
+      document.body.appendChild(meas);
+      const charWidth = meas.getBoundingClientRect().width;
+      const lineHeight = meas.getBoundingClientRect().height; // approximate
+      document.body.removeChild(meas);
+
+      // get mapPre position
+      const preRect = mapPre.getBoundingClientRect();
+      // account for padding inside pre
+      const style = computed;
+      const paddingLeft = parseFloat(style.paddingLeft || 0);
+      const paddingTop = parseFloat(style.paddingTop || 0);
+
+      // calculate left/top relative to mapContainer (which is positioned:relative)
+      const left = paddingLeft + col * charWidth;
+      const top = paddingTop + foundLine * lineHeight;
+
+      // create overlay button
+      const overlay = document.createElement('button');
+      overlay.setAttribute('aria-label', 'open gallery');
+      overlay.style.position = 'absolute';
+      overlay.style.left = left + 'px';
+      // nudge top a tiny amount to vertically center the clickable area
+      overlay.style.top = (top - 2 + 3 * lineHeight) + 'px';
+      overlay.style.width = (targetWord.length * charWidth) + 'px';
+      overlay.style.height = (lineHeight + 4) + 'px';
+      overlay.style.background = 'transparent';
+      overlay.style.border = 'none';
+      overlay.style.padding = '0';
+      overlay.style.cursor = 'pointer';
+      overlay.style.zIndex = 9999;
+      overlay.style.outline = 'none';
+      overlay.style.opacity = '0';
+
+      mapContainer.appendChild(overlay);
+
+      overlay.addEventListener('click', () => {
+        overlay.disabled = true;
+        fastEraseThenEnter();
+      });
+
+      // for debugging: expose overlay on window (remove in prod)
+      window._lastGalleryOverlay = overlay;
+    }
+
+    function fastEraseThenEnter() {
+      const textNode = mapPre.firstChild;
+      if (!textNode) return;
+      const totalDuration = 600; // ms
+      const len = textNode.textContent.length;
+      const stepDelay = Math.max(1, Math.floor(totalDuration / Math.max(1, len)));
+      let i = len;
+      function eraseStep() {
+        if (i >= 0) {
+          textNode.textContent = textNode.textContent.slice(0, i);
+          i--;
+          setTimeout(eraseStep, stepDelay);
+        } else {
+          const enterText = 'entering gallery...';
+          typeMap(enterText, mapPre, 30, () => setTimeout(enterGallery, 200));
+        }
+      }
+      eraseStep();
+    }
+
+    // --- Show gallery images with left-to-right fade/slide ---
+    function enterGallery() {
+      mapPre.style.display = 'none';
+      galleryImages.style.display = 'block';
+
+      const imgs = galleryImages.querySelectorAll('img');
+
+      // Apply initial styles
+      imgs.forEach(img => {
+        img.style.opacity = '0';
+        img.style.transform = 'translateX(-20px)';
+        img.style.transition = 'opacity 5000ms ease, transform 5000ms ease';
+      });
+
+      // Start sequence
+      requestAnimationFrame(() => {
+        imgs.forEach((img, idx) => {
+          setTimeout(() => {
+            img.style.opacity = '1';
+            img.style.transform = 'translateX(0)';
+          }, idx * 2500); // 2.5 seconds between start times
+        });
+      });
+    }
+
+    // debug helper
+    window._debug_showMap = () => {
+      intro.style.display = 'none';
+      mapContainer.style.display = 'block';
+      mapPre.textContent = mapText;
+      createGalleryOverlayByMetrics();
+    };
   </script>
 </body>
 </html>
+
