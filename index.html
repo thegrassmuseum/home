@@ -1,312 +1,188 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>the grass museum</title>
-  <style>
-    /* Reset basic margins */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    /* Full white background, center content */
-    body {
-      background-color: #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      font-family: "Courier New", Courier, monospace;
-    }
-
-    /* Wrapper for the button, so we can animate fade-in on load */
-    .fade-in {
-      opacity: 0;
-      animation: fadeIn 6s ease forwards;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to   { opacity: 1; }
-    }
-
-    /* Button text */
-    .museum-button {
-      position: relative;
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.9rem;
-      color: #000000;
-      text-transform: lowercase;
-      outline: none;
-      padding: 0;
-    }
-
-    .museum-button span {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      transition: opacity 0.5s ease;
-      white-space: nowrap;
-    }
-
-    .museum-button .label-main {
-      opacity: 1;
-    }
-
-    .museum-button .label-hover {
-      opacity: 0;
-    }
-
-    .museum-button:hover .label-main {
-      opacity: 0;
-    }
-
-    .museum-button:hover .label-hover {
-      opacity: 1;
-    }
-
-    /* Map container (hidden at first) */
-    .map-container {
-      display: none;
-      font-family: "Courier New", Courier, monospace;
-      font-size: 0.9rem;
-      line-height: 1.2;
-      white-space: pre;
-      text-align: left;
-      position: relative; /* needed for absolutely positioned overlay */
-      padding: 20px;
-    }
-
-    /* For smaller screens, reduce font size a bit */
-    @media (max-width: 600px) {
-      .museum-button {
-        font-size: 2.5rem;
-      }
-      .map-container {
-        font-size: 0.75rem;
-      }
-    }
-
-    /* Simple layout for gallery images */
-    #gallery-images img {
-      width: 120px;
-      height: 80px;
-      object-fit: cover;
-      display: inline-block;
-    }
-
-  </style>
+<meta charset="UTF-8" />
+<title>the grass museum</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: "Courier New", Courier, monospace;
+    padding: 2rem;
+  }
+  .fade-in { opacity: 0; animation: fadeIn 1s ease forwards; margin-bottom: 1rem; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .museum-button {
+    position: relative;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9rem;
+    color: #000000;
+    text-transform: lowercase;
+    outline: none;
+    padding: 0;
+  }
+  .museum-button span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.5s ease;
+    white-space: nowrap;
+  }
+  .museum-button .label-main { opacity: 1; }
+  .museum-button .label-hover { opacity: 0; }
+  .museum-button:hover .label-main { opacity: 0; }
+  .museum-button:hover .label-hover { opacity: 1; }
+  .map-container {
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    white-space: pre;
+    text-align: left;
+    margin-top: 1rem;
+    width: 100%;
+    max-width: 500px;
+  }
+  .image-gallery {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    width: 100%;
+    max-width: 700px;
+    opacity: 0;
+  }
+  .image-gallery img {
+    width: 18%;
+    opacity: 0;
+    transition: opacity 1s ease;
+  }
+  textarea { width: 100%; max-width: 500px; height: 200px; font-family: "Courier New", Courier, monospace; font-size: 0.9rem; margin-bottom: 1rem; }
+  @media (max-width: 600px) {
+    .museum-button { font-size: 2.5rem; }
+    .map-container { font-size: 0.75rem; }
+    textarea { font-size: 0.75rem; height: 150px; }
+  }
+</style>
 </head>
 <body>
-  <!-- Intro button -->
-  <div class="fade-in" id="intro">
-    <button class="museum-button" type="button">
-      <span class="label-main">the grass museum</span>
-      <span class="label-hover">enter</span>
-    </button>
-  </div>
 
-  <!-- ASCII map appears after click -->
-  <div id="map-container" class="map-container">
-    <pre id="museum-map"></pre>
+<div class="fade-in" id="intro">
+  <button class="museum-button" type="button">
+    <span class="label-main">the grass museum</span>
+    <span class="label-hover">enter</span>
+  </button>
+</div>
 
-    <!-- gallery images (hidden until needed) -->
-    <div id="gallery-images" style="display:none; opacity:0; transition: opacity 500ms ease; position:relative; margin-top:10px; text-align:center;">
-      <img src="home/images/smog.jpeg" style="opacity:0; margin:6px;" alt="smog" />
-      <img src="home/images/thedivine.jpeg" style="opacity:0; margin:6px;" alt="the divine" />
-      <img src="home/images/theroom.jpeg" style="opacity:0; margin:6px;" alt="the room" />
-      <img src="home/images/tria.jpeg" style="opacity:0; margin:6px;" alt="tria" />
-    </div>
-  </div>
+<textarea id="map-editor">
+┌───────────────────┐
+│                   │
+│      GALLERY      │
+│         ↑         │
+│                   │
+└────────┬──────────┘
+         │
+EXIT─────◄───►─────────────────GARDEN
+         │
+┌────────┴──────────┐
+│                   │
+│      GIFT SHOP    │
+│         ↓         │
+│                   │
+└───────────────────┘
+</textarea>
+<button id="show-map-btn">Show Map</button>
 
-  <script>
-    // --- Elements ---
-    const intro = document.getElementById("intro");
-    const button = document.querySelector(".museum-button");
-    const mapContainer = document.getElementById("map-container");
-    const mapPre = document.getElementById("museum-map");
-    const galleryImages = document.getElementById('gallery-images');
+<div id="map-container" class="map-container">
+  <pre id="museum-map"></pre>
+</div>
 
-    // --- Map text ---
-    const mapText = `
-                ┌───────────────────┐
-                │                   │
-                │     GALLERY       │
-                │        ↑          │
-                │                   │
-                └────────┬──────────┘
-                         │
-                         │
-EXIT───────────────  ◄───┼───► ─────────────────GARDEN
-                         │
-                         │
-                ┌────────┴──────────┐
-                │                   │
-                │        ↓          │
-                │     GIFT SHOP     │
-                │                   │
-                └───────────────────┘
-`;
+<div id="entering-text" class="map-container" style="display:none; font-weight:bold;"></div>
 
-    // --- Typing function ---
-    function typeMap(text, element, speed, onDone) {
-      element.textContent = '';
-      let index = 0;
-      function step() {
-        if (index <= text.length) {
-          element.textContent = text.slice(0, index);
-          index++;
-          setTimeout(step, speed);
-        } else if (typeof onDone === 'function') {
-          onDone();
-        }
-      }
-      step();
-    }
+<div class="image-gallery" id="image-gallery">
+  <img src="https://via.placeholder.com/150/ff7f7f/000000?text=1" alt="1">
+  <img src="https://via.placeholder.com/150/7fbfff/000000?text=2" alt="2">
+  <img src="https://via.placeholder.com/150/7fff7f/000000?text=3" alt="3">
+  <img src="https://via.placeholder.com/150/ffff7f/000000?text=4" alt="4">
+  <img src="https://via.placeholder.com/150/ff7fff/000000?text=5" alt="5">
+</div>
 
-    // --- Click to show map ---
-    button.addEventListener("click", () => {
-      intro.style.display = "none";
-      mapContainer.style.display = "block";
-      // start typing faster (5ms per char)
-      typeMap(mapText, mapPre, 5, () => {
-        // after typing finishes create invisible overlay button over the word GALLERY
-        // use a robust char-measure approach (monospace assumption)
-        requestAnimationFrame(() => setTimeout(createGalleryOverlayByMetrics, 10));
-      });
-    });
+<script>
+const intro = document.getElementById("intro");
+const button = document.querySelector(".museum-button");
+const mapContainer = document.getElementById("map-container");
+const mapPre = document.getElementById("museum-map");
+const editor = document.getElementById("map-editor");
+const showMapBtn = document.getElementById("show-map-btn");
+const enteringText = document.getElementById("entering-text");
+const imageGallery = document.getElementById("image-gallery");
 
-    // --- Create overlay by measuring characters (more reliable than Range in some environments) ---
-    function createGalleryOverlayByMetrics() {
-      const txtNode = mapPre.firstChild;
-      if (!txtNode || txtNode.nodeType !== Node.TEXT_NODE) return;
-      const full = txtNode.textContent;
-      const targetWord = 'GALLERY';
-      // split lines correctly by newline character
-      const lines = full.split('\n');
-      let foundLine = -1;
-      let col = -1;
-      for (let i = 0; i < lines.length; i++) {
-        const idx = lines[i].indexOf(targetWord);
-        if (idx !== -1) {
-          foundLine = i;
-          col = idx;
-          break;
-        }
-      }
-      if (foundLine === -1) return;
+// Type the map faster
+function typeMap(text, element, speed=5, callback) {
+  let index = 0;
+  function step() {
+    if (index <= text.length) {
+      element.textContent = text.slice(0, index);
+      index++;
+      setTimeout(step, speed);
+    } else if(callback) callback();
+  }
+  step();
+}
 
-      // measure character size using a temporary span with the same font properties
-      const computed = window.getComputedStyle(mapPre);
-      const meas = document.createElement('span');
-      meas.textContent = 'M';
-      meas.style.fontFamily = computed.fontFamily;
-      meas.style.fontSize = computed.fontSize;
-      meas.style.visibility = 'hidden';
-      meas.style.position = 'absolute';
-      meas.style.whiteSpace = 'nowrap';
-      document.body.appendChild(meas);
-      const charWidth = meas.getBoundingClientRect().width;
-      const lineHeight = meas.getBoundingClientRect().height; // approximate
-      document.body.removeChild(meas);
+// Delete text character by character fast
+function deleteMap(element, speed=1, callback) {
+  let text = element.textContent;
+  let index = text.length;
+  function step() {
+    if (index >= 0) {
+      element.textContent = text.slice(0, index);
+      index--;
+      setTimeout(step, speed);
+    } else if(callback) callback();
+  }
+  step();
+}
 
-      // get mapPre position
-      const preRect = mapPre.getBoundingClientRect();
-      // account for padding inside pre
-      const style = computed;
-      const paddingLeft = parseFloat(style.paddingLeft || 0);
-      const paddingTop = parseFloat(style.paddingTop || 0);
-
-      // calculate left/top relative to mapContainer (which is positioned:relative)
-      const left = paddingLeft + col * charWidth;
-      const top = paddingTop + foundLine * lineHeight;
-
-      // create overlay button
-      const overlay = document.createElement('button');
-      overlay.setAttribute('aria-label', 'open gallery');
-      overlay.style.position = 'absolute';
-      overlay.style.left = left + 'px';
-      // nudge top a tiny amount to vertically center the clickable area
-      overlay.style.top = (top - 2 + 3 * lineHeight) + 'px';
-      overlay.style.width = (targetWord.length * charWidth) + 'px';
-      overlay.style.height = (lineHeight + 4) + 'px';
-      overlay.style.background = 'transparent';
-      overlay.style.border = 'none';
-      overlay.style.padding = '0';
-      overlay.style.cursor = 'pointer';
-      overlay.style.zIndex = 9999;
-      overlay.style.outline = 'none';
-      overlay.style.opacity = '0';
-
-      mapContainer.appendChild(overlay);
-
-      overlay.addEventListener('click', () => {
-        overlay.disabled = true;
-        fastEraseThenEnter();
-      });
-
-      // for debugging: expose overlay on window (remove in prod)
-      window._lastGalleryOverlay = overlay;
-    }
-
-    function fastEraseThenEnter() {
-      const textNode = mapPre.firstChild;
-      if (!textNode) return;
-      const totalDuration = 600; // ms
-      const len = textNode.textContent.length;
-      const stepDelay = Math.max(1, Math.floor(totalDuration / Math.max(1, len)));
-      let i = len;
-      function eraseStep() {
-        if (i >= 0) {
-          textNode.textContent = textNode.textContent.slice(0, i);
-          i--;
-          setTimeout(eraseStep, stepDelay);
-        } else {
-          const enterText = 'entering gallery...';
-          typeMap(enterText, mapPre, 30, () => setTimeout(enterGallery, 200));
-        }
-      }
-      eraseStep();
-    }
-
-    // --- Show gallery images with left-to-right fade/slide ---
-    function enterGallery() {
-      mapPre.style.display = 'none';
-      galleryImages.style.display = 'block';
-
-      const imgs = galleryImages.querySelectorAll('img');
-
-      // Apply initial styles
-      imgs.forEach(img => {
-        img.style.opacity = '0';
-        img.style.transform = 'translateX(-20px)';
-        img.style.transition = 'opacity 5000ms ease, transform 5000ms ease';
-      });
-
-      // Start sequence
-      requestAnimationFrame(() => {
-        imgs.forEach((img, idx) => {
-          setTimeout(() => {
-            img.style.opacity = '1';
-            img.style.transform = 'translateX(0)';
-          }, idx * 2500); // 2.5 seconds between start times
+// Click the "GALLERY" word inside the map
+mapPre.addEventListener("click", (e) => {
+  if(e.target.textContent.includes("GALLERY")) {
+    deleteMap(mapPre, 1, () => {
+      mapContainer.style.display = "none";
+      enteringText.style.display = "block";
+      typeMap("Entering gallery...\n", enteringText, 20, () => {
+        // Fade in images
+        imageGallery.style.opacity = 1;
+        const imgs = imageGallery.querySelectorAll("img");
+        imgs.forEach((img, i) => {
+          setTimeout(() => { img.style.opacity = 1; }, i*300);
         });
       });
-    }
+    });
+  }
+});
 
-    // debug helper
-    window._debug_showMap = () => {
-      intro.style.display = 'none';
-      mapContainer.style.display = 'block';
-      mapPre.textContent = mapText;
-      createGalleryOverlayByMetrics();
-    };
-  </script>
+// Show map button
+showMapBtn.addEventListener("click", () => {
+  intro.style.display = "none";
+  mapContainer.style.display = "block";
+  typeMap(editor.value, mapPre, 5);
+});
+
+// Original intro button
+button.addEventListener("click", () => {
+  intro.style.display = "none";
+  mapContainer.style.display = "block";
+  typeMap(editor.value, mapPre, 5);
+});
+</script>
+
 </body>
 </html>
