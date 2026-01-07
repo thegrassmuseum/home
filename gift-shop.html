@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>gift shop — the grass museum</title>
+
+  <style>
+    html, body{
+      margin:0; padding:0; width:100%; height:100%;
+      background:#fff; color:#000;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                   "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
+      overflow:hidden;
+    }
+
+    /* ===== TOP TITLE ===== */
+    #title {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: lowercase;
+      opacity: 0.9;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    /* World/scene */
+    #world{
+      position:relative;
+      width:100vw;
+      height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding-top: 10vh;
+      gap: 80px;
+      user-select:none;
+    }
+
+    pre{
+      margin:0;
+      font-size:14px;
+      line-height:1.2;
+      white-space:pre;
+    }
+
+    /* Player */
+    #player{
+      position:absolute;
+      left:50%;
+      bottom: 10vh;
+      transform: translateX(-50%);
+      font-size:14px;
+      line-height:1.05;
+      text-align:center;
+      pointer-events:none;
+      z-index: 4;
+    }
+
+    /* Arrow points at the X */
+    #player .label { display:block; font-size:12px; opacity:0.9; }
+    #player .arrow { display:block; line-height:1; }
+    #player .x     { display:block; line-height:1; }
+
+    /* When movement starts, hide label+arrow */
+    #player.moving .label,
+    #player.moving .arrow{
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    /* Optional tiny hint */
+    #hint{
+      position:fixed;
+      left:16px;
+      bottom:14px;
+      font-size:11px;
+      opacity:0.6;
+      pointer-events:none;
+      white-space:pre;
+      z-index: 5;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="title">gift shop</div>
+
+  <div id="world">
+    <pre id="houseVinyl"></pre>
+    <pre id="houseAttire"></pre>
+
+    <div id="player" aria-hidden="true">
+      <span class="label">you</span>
+      <span class="arrow">↓</span>
+      <span class="x">X</span>
+    </div>
+  </div>
+
+  <div id="hint" aria-hidden="true">move: WASD or arrow keys</div>
+
+  <script>
+    /* ====== CONFIG ====== */
+    const SPEED_TYPING_MS = 2;         // house typing speed (lower = faster)
+    const MOVE_SPEED_PX   = 3.2;       // player move speed per frame
+    const ATTIRE_PAGE     = "attire.html";
+    const VINYL_URL       = "https://example.com"; // <-- replace with your external link
+
+    /* ====== BUILD TWO HOUSES (type simultaneously) ====== */
+    const houseTemplate = (label) =>
+"              __________\n" +
+"             ///////////\\\\\n" +
+"            ///////////  \\\\\n" +
+"            |    _    |  |     ┌──────┐\n" +
+`            |[] | | []|[]|     │${label.padEnd(6," ")}│\n` +
+"            |___| |___|__|     └──┬───┘\n" +
+"                                  │\n" +
+"                                  │\n";
+
+    function typeAscii(target, text, ms) {
+      target.textContent = "";
+      let i = 0;
+      const t = setInterval(() => {
+        target.textContent += text[i] ?? "";
+        i++;
+        if (i >= text.length) clearInterval(t);
+      }, ms);
+    }
+
+    const vinylEl  = document.getElementById("houseVinyl");
+    const attireEl = document.getElementById("houseAttire");
+
+    typeAscii(vinylEl,  houseTemplate("VINYL"),  SPEED_TYPING_MS);
+    typeAscii(attireEl, houseTemplate("ATTIRE"), SPEED_TYPING_MS);
+
+    /* ====== PLAYER MOVEMENT (WASD + ARROWS) ====== */
+    const player = document.getElementById("player");
+
+    let px = window.innerWidth / 2;
+    let py = window.innerHeight * 0.90;
+
+    const keys = new Set();
+    let navigating = false;
+    let hasMoved = false;
+
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
+      keys.add(e.key.toLowerCase());
+    }, { passive:false });
+
+    window.addEventListener("keyup", (e) => {
+      keys.delete(e.key.toLowerCase());
+    });
+
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+    function getPlayerRect() {
+      return player.getBoundingClientRect();
+    }
+
+    function intersects(r1, r2) {
+      return !(r2.left > r1.right ||
+               r2.right < r1.left ||
+               r2.top > r1.bottom ||
+               r2.bottom < r1.top);
+    }
+
+    function resetPlayerToBottomCenter() {
+      px = window.innerWidth / 2;
+      py = window.innerHeight * 0.88;
+      player.style.left = px + "px";
+      player.style.top  = py + "px";
+      player.style.bottom = "auto";
+      player.style.transform = "translateX(-50%)";
+    }
+
+    function tick() {
+      if (!navigating) {
+        let dx = 0, dy = 0;
+
+        if (keys.has("a") || keys.has("arrowleft"))  dx -= MOVE_SPEED_PX;
+        if (keys.has("d") || keys.has("arrowright")) dx += MOVE_SPEED_PX;
+        if (keys.has("w") || keys.has("arrowup"))    dy -= MOVE_SPEED_PX;
+        if (keys.has("s") || keys.has("arrowdown"))  dy += MOVE_SPEED_PX;
+
+        // If movement begins, hide arrow+label once
+        if (!hasMoved && (dx !== 0 || dy !== 0)) {
+          hasMoved = true;
+          player.classList.add("moving");
+        }
+
+        px += dx;
+        py += dy;
+
+        const margin = 10;
+        px = clamp(px, margin, window.innerWidth - margin);
+        py = clamp(py, margin, window.innerHeight - margin);
+
+        player.style.left = px + "px";
+        player.style.top  = py + "px";
+        player.style.bottom = "auto";
+        player.style.transform = "translateX(-50%)";
+
+        const pr = getPlayerRect();
+        const vr = vinylEl.getBoundingClientRect();
+        const ar = attireEl.getBoundingClientRect();
+
+        if (intersects(pr, ar)) {
+          navigating = true;
+          window.location.href = ATTIRE_PAGE;
+          return;
+        }
+
+        if (intersects(pr, vr)) {
+          navigating = true;
+          window.location.href = VINYL_URL;
+          return;
+        }
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", resetPlayerToBottomCenter);
+
+    resetPlayerToBottomCenter();
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
