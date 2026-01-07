@@ -7,8 +7,8 @@
   <style>
     :root{
       /* ===== TUNABLE TIMINGS ===== */
-      --fade-duration: 4s;   /* how long each image fades in */
-      --stagger-delay: 600ms;   /* wait between images (left→right) */
+      --fade-duration: 4s;        /* how long each image fades in */
+      --stagger-delay: 600ms;     /* wait between images (left→right) */
 
       /* viewer animation */
       --viewer-fade: 180ms;
@@ -62,7 +62,6 @@
       opacity: 0;
       transform: translateY(6px);
       animation: fadeIn var(--fade-duration) ease forwards;
-      /* delay is injected per-item via inline style var(--d) */
       animation-delay: var(--d, 0ms);
       transition: transform 120ms ease;
     }
@@ -88,7 +87,10 @@
     .viewer {
       position: fixed;
       inset: 0;
-      display: none;
+      display: flex;                /* keep in layout for transitions */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--viewer-fade) ease;
       align-items: center;
       justify-content: center;
       padding: 28px 18px;
@@ -97,7 +99,11 @@
       -webkit-backdrop-filter: blur(10px);
       z-index: 999;
     }
-    .viewer[aria-hidden="false"] { display: flex; }
+
+    .viewer[aria-hidden="false"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
     .panel {
       width: min(1100px, 100%);
@@ -197,33 +203,40 @@
         min-height: 280px;
       }
     }
+
+    /* ===== Shared element transition (thumbnail → viewer) ===== */
+    .vt-shared {
+      view-transition-name: shared-artwork;
+    }
+
+    ::view-transition-old(shared-artwork),
+    ::view-transition-new(shared-artwork) {
+      animation-duration: 520ms;
+      animation-timing-function: cubic-bezier(.2,.8,.2,1);
+    }
   </style>
 </head>
 <body>
   <main class="page">
     <section class="strip" id="strip" aria-label="gallery thumbnails">
-      <!--
-        Replace the src values with your own images.
-        Keep data-title / data-text for the right-side info tab.
-      -->
       <button class="thumb" style="--d: calc(var(--stagger-delay) * 0);" data-full="images/01.jpeg" data-title="Smog" data-text="Add your description here.\n\nMedium, year, notes.">
-        <img src="images/01.jpeg" alt="piece 01 thumbnail">
+        <img src="images/01.jpeg" alt="Smog thumbnail">
       </button>
 
       <button class="thumb" style="--d: calc(var(--stagger-delay) * 1);" data-full="images/02.jpeg" data-title="The Divine" data-text="Add your description here.\n\nAnything you want.">
-        <img src="images/02.jpeg" alt="piece 02 thumbnail">
+        <img src="images/02.jpeg" alt="The Divine thumbnail">
       </button>
 
       <button class="thumb" style="--d: calc(var(--stagger-delay) * 2);" data-full="images/03.jpeg" data-title="The Room" data-text="Add your description here.">
-        <img src="images/03.jpeg" alt="piece 03 thumbnail">
+        <img src="images/03.jpeg" alt="The Room thumbnail">
       </button>
 
       <button class="thumb" style="--d: calc(var(--stagger-delay) * 3);" data-full="images/04.jpeg" data-title="Tria" data-text="Add your description here.">
-        <img src="images/04.jpeg" alt="piece 04 thumbnail">
+        <img src="images/04.jpeg" alt="Tria thumbnail">
       </button>
 
       <button class="thumb" style="--d: calc(var(--stagger-delay) * 4);" data-full="images/05.jpeg" data-title="Ministries" data-text="Add your description here.">
-        <img src="images/05.jpeg" alt="piece 05 thumbnail">
+        <img src="images/05.jpeg" alt="Ministries thumbnail">
       </button>
     </section>
   </main>
@@ -247,18 +260,22 @@
   </div>
 
   <script>
-    /*
-      ====== HOW TO TUNE TIMINGS ======
-      In :root (CSS):
-        --fade-duration: 900ms;   // fade-in length per image
-        --stagger-delay: 250ms;   // wait between images
-    */
-
     const viewer = document.getElementById("viewer");
     const viewerImg = document.getElementById("viewerImg");
     const viewerTitle = document.getElementById("viewerTitle");
     const viewerText = document.getElementById("viewerText");
     const closeBtn = document.getElementById("closeBtn");
+
+    // Shared-element transition wrapper (falls back gracefully)
+    function withTransition(fn) {
+      if (document.startViewTransition) {
+        document.startViewTransition(fn);
+      } else {
+        fn();
+      }
+    }
+
+    let activeThumbImg = null;
 
     function openViewer({ full, title, text, alt }) {
       viewerImg.src = full;
@@ -266,26 +283,50 @@
       viewerTitle.textContent = title || "piece";
       viewerText.textContent = text || "";
       viewer.setAttribute("aria-hidden", "false");
+
       // prevent background scroll
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
     }
 
     function closeViewer() {
-      viewer.setAttribute("aria-hidden", "true");
-      viewerImg.src = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
+      withTransition(() => {
+        viewer.setAttribute("aria-hidden", "true");
+        viewerImg.classList.remove("vt-shared");
+
+        document.documentElement.style.overflow = "";
+        document.body.style.overflow = "";
+      });
+
+      // cleanup after transition
+      setTimeout(() => {
+        viewerImg.src = "";
+        if (activeThumbImg) {
+          activeThumbImg.classList.remove("vt-shared");
+          activeThumbImg = null;
+        }
+      }, 650);
     }
 
-    // Click a thumbnail
+    // Click a thumbnail: animate thumbnail → viewer image
     document.querySelectorAll(".thumb").forEach((btn) => {
       btn.addEventListener("click", () => {
-        openViewer({
-          full: btn.dataset.full,
-          title: btn.dataset.title,
-          text: btn.dataset.text,
-          alt: btn.querySelector("img")?.alt
+        const img = btn.querySelector("img");
+        activeThumbImg = img;
+
+        // mark thumbnail as shared element
+        img.classList.add("vt-shared");
+
+        withTransition(() => {
+          openViewer({
+            full: btn.dataset.full,
+            title: btn.dataset.title,
+            text: btn.dataset.text,
+            alt: img?.alt
+          });
+
+          // mark viewer image as shared element
+          viewerImg.classList.add("vt-shared");
         });
       });
     });
