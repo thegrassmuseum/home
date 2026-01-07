@@ -5,6 +5,7 @@
 <title>the grass museum</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+
   body {
     background-color: #ffffff;
     display: flex;
@@ -15,8 +16,10 @@
     font-family: "Courier New", Courier, monospace;
     padding: 2rem;
   }
+
   .fade-in { opacity: 0; animation: fadeIn 1s ease forwards; margin-bottom: 1rem; }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
   .museum-button {
     position: relative;
     border: none;
@@ -41,6 +44,7 @@
   .museum-button .label-hover { opacity: 0; }
   .museum-button:hover .label-main { opacity: 0; }
   .museum-button:hover .label-hover { opacity: 1; }
+
   .map-container {
     font-family: "Courier New", Courier, monospace;
     font-size: 0.9rem;
@@ -51,6 +55,14 @@
     width: 100%;
     max-width: 500px;
   }
+
+  /* Hotspots inside the ASCII map */
+  .hotspot {
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
   .image-gallery {
     display: flex;
     justify-content: space-between;
@@ -64,7 +76,16 @@
     opacity: 0;
     transition: opacity 1s ease;
   }
-  textarea { width: 100%; max-width: 500px; height: 200px; font-family: "Courier New", Courier, monospace; font-size: 0.9rem; margin-bottom: 1rem; }
+
+  textarea {
+    width: 100%;
+    max-width: 500px;
+    height: 200px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
   @media (max-width: 600px) {
     .museum-button { font-size: 2.5rem; }
     .map-container { font-size: 0.75rem; }
@@ -98,9 +119,9 @@ EXIT─────────────◄───►───────�
           │                   │
           └───────────────────┘
 </textarea>
-<button id="show-map-btn">Show Map</button>
+<button id="show-map-btn" type="button">Show Map</button>
 
-<div id="map-container" class="map-container">
+<div id="map-container" class="map-container" style="display:none;">
   <pre id="museum-map"></pre>
 </div>
 
@@ -124,21 +145,44 @@ const showMapBtn = document.getElementById("show-map-btn");
 const enteringText = document.getElementById("entering-text");
 const imageGallery = document.getElementById("image-gallery");
 
-// Type the map faster
-function typeMap(text, element, speed=5, callback) {
+function escapeHTML(str) {
+  return str
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+// Turn specific words into clickable hotspots AFTER typing completes
+function applyHotspots() {
+  const safe = escapeHTML(mapPre.textContent);
+
+  // Wrap only the first occurrence of GALLERY (or all, if you want)
+  const withHotspots = safe.replace("GALLERY", `<span class="hotspot" data-room="gallery">GALLERY</span>`);
+
+  mapPre.innerHTML = withHotspots;
+
+  // Click handler for hotspots
+  mapPre.querySelectorAll(".hotspot").forEach((el) => {
+    el.addEventListener("click", () => {
+      const room = el.getAttribute("data-room");
+      if (room === "gallery") enterGallery();
+    });
+  });
+}
+
+function typeMap(text, element, speed = 5, callback) {
   let index = 0;
   function step() {
     if (index <= text.length) {
       element.textContent = text.slice(0, index);
       index++;
       setTimeout(step, speed);
-    } else if(callback) callback();
+    } else if (callback) callback();
   }
   step();
 }
 
-// Delete text character by character fast
-function deleteMap(element, speed=1, callback) {
+function deleteMap(element, speed = 1, callback) {
   let text = element.textContent;
   let index = text.length;
   function step() {
@@ -146,42 +190,44 @@ function deleteMap(element, speed=1, callback) {
       element.textContent = text.slice(0, index);
       index--;
       setTimeout(step, speed);
-    } else if(callback) callback();
+    } else if (callback) callback();
   }
   step();
 }
 
-// Click the "GALLERY" word inside the map
-mapPre.addEventListener("click", (e) => {
-  if(e.target.textContent.includes("GALLERY")) {
-    deleteMap(mapPre, 1, () => {
-      mapContainer.style.display = "none";
-      enteringText.style.display = "block";
-      typeMap("Entering gallery...\n", enteringText, 20, () => {
-        // Fade in images
-        imageGallery.style.opacity = 1;
-        const imgs = imageGallery.querySelectorAll("img");
-        imgs.forEach((img, i) => {
-          setTimeout(() => { img.style.opacity = 1; }, i*300);
-        });
+function enterGallery() {
+  // Remove hotspots first (so deletion is clean)
+  mapPre.textContent = mapPre.textContent;
+
+  deleteMap(mapPre, 1, () => {
+    mapContainer.style.display = "none";
+    enteringText.style.display = "block";
+    enteringText.textContent = "";
+    typeMap("Entering gallery...\n", enteringText, 20, () => {
+      imageGallery.style.opacity = 1;
+      const imgs = imageGallery.querySelectorAll("img");
+      imgs.forEach((img, i) => {
+        setTimeout(() => { img.style.opacity = 1; }, i * 300);
       });
     });
-  }
-});
+  });
+}
 
-// Show map button
-showMapBtn.addEventListener("click", () => {
+function showMap() {
   intro.style.display = "none";
   mapContainer.style.display = "block";
-  typeMap(editor.value, mapPre, 5);
-});
+  enteringText.style.display = "none";
 
-// Original intro button
-button.addEventListener("click", () => {
-  intro.style.display = "none";
-  mapContainer.style.display = "block";
-  typeMap(editor.value, mapPre, 5);
-});
+  // Reset map + images each time
+  mapPre.textContent = "";
+  imageGallery.style.opacity = 0;
+  imageGallery.querySelectorAll("img").forEach(img => img.style.opacity = 0);
+
+  typeMap(editor.value, mapPre, 5, applyHotspots);
+}
+
+showMapBtn.addEventListener("click", showMap);
+button.addEventListener("click", showMap);
 </script>
 
 </body>
