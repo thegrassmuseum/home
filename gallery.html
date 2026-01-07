@@ -8,7 +8,7 @@
   <style>
     :root{
       --fade-duration: 6s;
-      --stagger-delay: 600ms;
+      --stagger-delay: 1s;
       --viewer-fade: 600ms;
     }
 
@@ -70,6 +70,7 @@
       top: 16px;
       right: 16px;
       pointer-events: none;
+      z-index: 50;
     }
 
     .mini-map {
@@ -117,6 +118,7 @@
       opacity: 0;
       transition: opacity 200ms ease;
       pointer-events: none;
+      z-index: 60;
     }
 
     .entering.show {
@@ -129,11 +131,11 @@
 
   <main class="page" id="page">
     <section class="strip">
-      <div class="thumb" style="--d:0ms"><img src="images/01.jpeg"></div>
-      <div class="thumb" style="--d:600ms"><img src="images/02.jpeg"></div>
-      <div class="thumb" style="--d:1200ms"><img src="images/03.jpeg"></div>
-      <div class="thumb" style="--d:1800ms"><img src="images/04.jpeg"></div>
-      <div class="thumb" style="--d:2400ms"><img src="images/05.jpeg"></div>
+      <div class="thumb" style="--d:0ms"><img src="images/01.jpeg" alt=""></div>
+      <div class="thumb" style="--d:600ms"><img src="images/02.jpeg" alt=""></div>
+      <div class="thumb" style="--d:1200ms"><img src="images/03.jpeg" alt=""></div>
+      <div class="thumb" style="--d:1800ms"><img src="images/04.jpeg" alt=""></div>
+      <div class="thumb" style="--d:2400ms"><img src="images/05.jpeg" alt=""></div>
     </section>
   </main>
 
@@ -160,28 +162,38 @@ exit──┼──garden
     const entering = document.getElementById("entering");
     const giftLink = document.querySelector(".mini-gift");
 
-    // show mini map after thumbnails finish
-    document.querySelectorAll(".thumb").at(-1)
-      .addEventListener("animationend", () => {
-        miniMap.classList.add("visible");
-      }, { once:true });
+    const thumbs = document.querySelectorAll(".thumb");
+    const lastThumb = thumbs[thumbs.length - 1];
 
-    // gift shop transition
-    giftLink.addEventListener("click", (e) => {
-      e.preventDefault();
+    function showMiniMap() {
+      miniMap.classList.add("visible");
+    }
 
-      // fade everything out
-      page.classList.add("fade-out");
-      miniMap.classList.remove("visible");
+    // Show mini map after the last thumbnail finishes its animation
+    if (lastThumb) {
+      lastThumb.addEventListener("animationend", showMiniMap, { once: true });
 
-      setTimeout(() => {
-        entering.classList.add("show");
-      }, 150);
+      // Fallback: in case animationend doesn't fire for any reason
+      const fadeMs = 6000;      // matches --fade-duration
+      const lastDelayMs = 2400; // matches the last --d
+      setTimeout(showMiniMap, fadeMs + lastDelayMs + 200);
+    } else {
+      // If no thumbs, just show it
+      showMiniMap();
+    }
 
-      setTimeout(() => {
-        window.location.href = giftLink.href;
-      }, 900);
-    });
+    // Gift shop transition
+    if (giftLink) {
+      giftLink.addEventListener("click", (e) => {
+        e.preventDefault();
+
+        page.classList.add("fade-out");
+        miniMap.classList.remove("visible");
+
+        setTimeout(() => entering.classList.add("show"), 150);
+        setTimeout(() => { window.location.href = giftLink.href; }, 900);
+      });
+    }
   </script>
 
 </body>
