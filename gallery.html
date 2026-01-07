@@ -7,10 +7,9 @@
 
   <style>
     :root{
-      /* ===== TUNABLE TIMINGS ===== */
-      --fade-duration: 6s;        /* how long each image fades in */
-      --stagger-delay: 600ms;     /* wait between images (left→right) */
-      --viewer-fade: 600ms;       /* viewer fade in/out */
+      --fade-duration: 6s;
+      --stagger-delay: 600ms;
+      --viewer-fade: 600ms;
     }
 
     * { box-sizing: border-box; }
@@ -23,167 +22,54 @@
                    "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
     }
 
-    /* ===== PAGE LAYOUT ===== */
+    /* ===== PAGE ===== */
     .page {
       min-height: 100%;
       display: grid;
       place-items: center;
       padding: 40px 24px;
+      transition: opacity 300ms ease;
     }
 
+    .page.fade-out {
+      opacity: 0;
+    }
+
+    /* ===== THUMB STRIP ===== */
     .strip {
       display: flex;
       gap: 40px;
-      align-items: center;
       justify-content: center;
-      flex-wrap: nowrap;
-      max-width: 100%;
-      overflow-x: auto;
-      padding: 10px 6px;
-      scrollbar-width: none;
     }
-    .strip::-webkit-scrollbar { display: none; }
 
-    /* ===== THUMBNAILS ===== */
     .thumb {
       width: 280px;
       aspect-ratio: 1 / 1;
-      border: 1px solid rgba(0,0,0,.12);
-      border-radius: 12px;
-      background: #f7f7f7;
-      overflow: hidden;
-      cursor: pointer;
-      padding: 0;
-      display: grid;
-      place-items: center;
-
       opacity: 0;
-      transform: translateY(6px);
       animation: fadeIn var(--fade-duration) ease forwards;
       animation-delay: var(--d, 0ms);
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
     }
 
     .thumb img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      display: block;
     }
 
     @keyframes fadeIn {
-      to { opacity: 1; transform: translateY(0); }
+      to { opacity: 1; }
     }
 
-    /* ===== VIEWER ===== */
-    .viewer {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity var(--viewer-fade) cubic-bezier(.16,1,.3,1);
-      align-items: center;
-      justify-content: center;
-      padding: 28px 18px;
-      background: rgba(255,255,255,.92);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      z-index: 999;
-    }
-
-    .viewer[aria-hidden="false"] {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .panel {
-      width: min(1100px, 100%);
-      display: grid;
-      grid-template-columns: 1fr 320px;
-      gap: 16px;
-    }
-
-    .viewerImage {
-      border-radius: 16px;
-      border: 1px solid rgba(0,0,0,.12);
-      overflow: hidden;
-      min-height: 360px;
-      background: #fff;
-      display: grid;
-      place-items: center;
-    }
-
-    .viewerImage img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-    }
-
-    .info {
-      border-radius: 16px;
-      border: 1px solid rgba(0,0,0,.12);
-      background: rgba(255,255,255,.85);
-      padding: 18px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .infoTop{
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .title {
-      font-size: 13px;
-      letter-spacing: 0.02em;
-      text-transform: lowercase;
-      margin: 0;
-      line-height: 1.2;
-    }
-
-    .meta {
-      font-size: 12px;
-      line-height: 1.5;
-      opacity: 0.9;
-      white-space: pre-wrap;
-      margin: 0;
-    }
-
-    .closeBtn{
-      border: 1px solid rgba(0,0,0,.15);
-      background: transparent;
-      border-radius: 999px;
-      padding: 6px 10px;
-      cursor: pointer;
-      font: inherit;
-      line-height: 1;
-      transition: background 120ms ease;
-    }
-    .closeBtn:hover { background: rgba(0,0,0,.04); }
-
-    .hint {
-      margin-top: auto;
-      font-size: 11px;
-      opacity: 0.7;
-      line-height: 1.4;
-    }
-
-    @media (max-width: 860px){
-      .panel { grid-template-columns: 1fr; }
-      .viewerImage { min-height: 280px; }
-    }
-
-    /* ===== MINI MAP (fades in after thumbnails) ===== */
+    /* ===== MINI MAP ===== */
     .mini-map-wrapper{
       position: fixed;
       top: 16px;
       right: 16px;
-      pointer-events: none; /* only hotspots receive clicks */
-      z-index: 1000;        /* above page, below viewer blur still ok */
+      pointer-events: none;
     }
 
     .mini-map {
@@ -199,48 +85,60 @@
       opacity: 0.75;
     }
 
-    /* Invisible clickable hotspot over the word "exit" */
+    /* EXIT hotspot — YOUR MEASUREMENTS */
     .mini-exit {
       position: absolute;
-      /* Line 3 in the pre: "exit──┼──garden"
-         line-height is 1.25, so 2.5em places us on the 3rd line cleanly */
       top: 1.5em;
       left: 0ch;
-      width: 2ch;     /* "exit" */
+      width: 2ch;
       height: 1em;
       pointer-events: auto;
       cursor: pointer;
+    }
+
+    /* GIFT SHOP hotspot — YOUR MEASUREMENTS */
+    .mini-gift {
+      position: absolute;
+      top: 3em;
+      left: 2ch;
+      width: 6ch;
+      height: 1em;
+      pointer-events: auto;
+      cursor: pointer;
+    }
+
+    /* ===== ENTERING TEXT ===== */
+    .entering {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 200ms ease;
+      pointer-events: none;
+    }
+
+    .entering.show {
+      opacity: 1;
     }
   </style>
 </head>
 
 <body>
-  <main class="page">
-    <section class="strip" id="strip" aria-label="gallery thumbnails">
-      <button class="thumb" style="--d: calc(var(--stagger-delay) * 0);" data-full="images/01.jpeg" data-title="Smog" data-text="Description here.">
-        <img src="images/01.jpeg" alt="Smog thumbnail">
-      </button>
 
-      <button class="thumb" style="--d: calc(var(--stagger-delay) * 1);" data-full="images/02.jpeg" data-title="The Divine" data-text="Description here.">
-        <img src="images/02.jpeg" alt="The Divine thumbnail">
-      </button>
-
-      <button class="thumb" style="--d: calc(var(--stagger-delay) * 2);" data-full="images/03.jpeg" data-title="The Room" data-text="Description here.">
-        <img src="images/03.jpeg" alt="The Room thumbnail">
-      </button>
-
-      <button class="thumb" style="--d: calc(var(--stagger-delay) * 3);" data-full="images/04.jpeg" data-title="Tria" data-text="Description here.">
-        <img src="images/04.jpeg" alt="Tria thumbnail">
-      </button>
-
-      <button class="thumb" style="--d: calc(var(--stagger-delay) * 4);" data-full="images/05.jpeg" data-title="Ministries" data-text="Description here.">
-        <img src="images/05.jpeg" alt="Ministries thumbnail">
-      </button>
+  <main class="page" id="page">
+    <section class="strip">
+      <div class="thumb" style="--d:0ms"><img src="images/01.jpeg"></div>
+      <div class="thumb" style="--d:600ms"><img src="images/02.jpeg"></div>
+      <div class="thumb" style="--d:1200ms"><img src="images/03.jpeg"></div>
+      <div class="thumb" style="--d:1800ms"><img src="images/04.jpeg"></div>
+      <div class="thumb" style="--d:2400ms"><img src="images/05.jpeg"></div>
     </section>
   </main>
 
-  <!-- MINI MAP (with clickable EXIT hotspot) -->
-  <div class="mini-map-wrapper" aria-hidden="true">
+  <!-- MINI MAP -->
+  <div class="mini-map-wrapper">
     <pre class="mini-map" id="miniMap">
    gallery ×
       |
@@ -248,73 +146,43 @@ exit──┼──garden
       |
   gift shop
     </pre>
+
     <a class="mini-exit" href="index.html" aria-label="back to vestibule"></a>
+    <a class="mini-gift" href="gift-shop.html" aria-label="enter gift shop"></a>
   </div>
 
-  <!-- VIEWER -->
-  <div class="viewer" id="viewer" aria-hidden="true" role="dialog" aria-label="image viewer">
-    <div class="panel" role="document">
-      <div class="viewerImage">
-        <img id="viewerImg" src="" alt="">
-      </div>
-      <aside class="info" aria-label="image details">
-        <div class="infoTop">
-          <h2 class="title" id="viewerTitle"></h2>
-          <button class="closeBtn" id="closeBtn" aria-label="close viewer">×</button>
-        </div>
-        <p class="meta" id="viewerText"></p>
-        <div class="hint">click outside or press esc to close</div>
-      </aside>
-    </div>
-  </div>
+  <!-- ENTERING TEXT -->
+  <div class="entering" id="entering">entering gift shop...</div>
 
   <script>
-    const thumbs = document.querySelectorAll(".thumb");
     const miniMap = document.getElementById("miniMap");
+    const page = document.getElementById("page");
+    const entering = document.getElementById("entering");
+    const giftLink = document.querySelector(".mini-gift");
 
-    // Fade in mini-map AFTER the last thumbnail finishes its fade-in animation
-    const lastThumb = thumbs[thumbs.length - 1];
-    lastThumb.addEventListener("animationend", () => {
-      miniMap.classList.add("visible");
-    }, { once: true });
+    // show mini map after thumbnails finish
+    document.querySelectorAll(".thumb").at(-1)
+      .addEventListener("animationend", () => {
+        miniMap.classList.add("visible");
+      }, { once:true });
 
-    // Viewer logic
-    const viewer = document.getElementById("viewer");
-    const viewerImg = document.getElementById("viewerImg");
-    const viewerTitle = document.getElementById("viewerTitle");
-    const viewerText = document.getElementById("viewerText");
-    const closeBtn = document.getElementById("closeBtn");
+    // gift shop transition
+    giftLink.addEventListener("click", (e) => {
+      e.preventDefault();
 
-    thumbs.forEach(btn => {
-      btn.addEventListener("click", () => {
-        viewerImg.src = btn.dataset.full;
-        viewerImg.alt = btn.dataset.title || "gallery image";
-        viewerTitle.textContent = btn.dataset.title || "";
-        viewerText.textContent = btn.dataset.text || "";
-        viewer.setAttribute("aria-hidden", "false");
-        document.documentElement.style.overflow = "hidden";
-        document.body.style.overflow = "hidden";
-      });
-    });
+      // fade everything out
+      page.classList.add("fade-out");
+      miniMap.classList.remove("visible");
 
-    function closeViewer() {
-      viewer.setAttribute("aria-hidden", "true");
-      viewerImg.src = "";
-      document.documentElement.style.overflow = "";
-      document.body.style.overflow = "";
-    }
+      setTimeout(() => {
+        entering.classList.add("show");
+      }, 150);
 
-    closeBtn.addEventListener("click", closeViewer);
-
-    viewer.addEventListener("click", (e) => {
-      if (e.target === viewer) closeViewer();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && viewer.getAttribute("aria-hidden") === "false") {
-        closeViewer();
-      }
+      setTimeout(() => {
+        window.location.href = giftLink.href;
+      }, 900);
     });
   </script>
+
 </body>
 </html>
