@@ -1,1 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>gallery — the grass museum</title>
+  <style>
+    :root{
+      /* ===== TUNABLE TIMINGS ===== */
+      --fade-duration: 3s;   /* how long each image fades in */
+      --stagger-delay: 400ms;   /* wait between images (left→right) */
 
+      /* viewer animation */
+      --viewer-fade: 180ms;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #ffffff;
+      color: #111;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                   "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
+    }
+
+    /* ===== PAGE LAYOUT ===== */
+    .page {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 40px 24px;
+    }
+
+    .strip {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: nowrap;
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 10px 6px;
+      scrollbar-width: none;
+    }
+    .strip::-webkit-scrollbar { display: none; }
+
+    /* ===== THUMBNAILS ===== */
+    .thumb {
+      width: 140px;
+      aspect-ratio: 1 / 1; /* square */
+      border: 1px solid rgba(0,0,0,.12);
+      border-radius: 12px;
+      background: #f7f7f7;
+      overflow: hidden;
+      cursor: pointer;
+      padding: 0;
+      display: grid;
+      place-items: center;
+
+      /* fade-in */
+      opacity: 0;
+      transform: translateY(6px);
+      animation: fadeIn var(--fade-duration) ease forwards;
+      /* delay is injected per-item via inline style var(--d) */
+      animation-delay: var(--d, 0ms);
+      transition: transform 120ms ease;
+    }
+    .thumb:focus-visible{
+      outline: 2px solid rgba(0,0,0,.35);
+      outline-offset: 2px;
+    }
+    .thumb:hover { transform: translateY(0px); }
+
+    .thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: contrast(1.02);
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== VIEWER (MODAL) ===== */
+    .viewer {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 18px;
+      background: rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      z-index: 999;
+    }
+    .viewer[aria-hidden="false"] { display: flex; }
+
+    .panel {
+      width: min(1100px, 100%);
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      align-items: stretch;
+      animation: viewerIn var(--viewer-fade) ease forwards;
+      transform-origin: center;
+    }
+
+    @keyframes viewerIn {
+      from { opacity: 0; transform: scale(0.995); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .viewerImage {
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,.12);
+      overflow: hidden;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      min-height: 360px;
+    }
+    .viewerImage img{
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #fff;
+      display: block;
+    }
+
+    .info {
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,.12);
+      background: rgba(255,255,255,.85);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .infoTop {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .title {
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      text-transform: lowercase;
+      margin: 0;
+      line-height: 1.2;
+      max-width: 220px;
+    }
+
+    .closeBtn{
+      border: 1px solid rgba(0,0,0,.15);
+      background: transparent;
+      border-radius: 999px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font: inherit;
+      line-height: 1;
+      transition: background 120ms ease;
+    }
+    .closeBtn:hover { background: rgba(0,0,0,.04); }
+
+    .meta {
+      font-size: 12px;
+      line-height: 1.5;
+      opacity: 0.9;
+      white-space: pre-wrap;
+      margin: 0;
+    }
+
+    .hint {
+      margin-top: auto;
+      font-size: 11px;
+      opacity: 0.7;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 860px){
+      .panel{
+        grid-template-columns: 1fr;
+      }
+      .info{
+        order: 2;
+      }
+      .viewerImage{
+        order: 1;
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="strip" id="strip" aria-label="gallery thumbnails">
+      <!--
+        Replace the src values with your own images.
+        Keep data-title / data-text for the right-side info tab.
+      -->
+      <button class="thumb" style="--d: calc(var(--stagger-delay) * 0);" data-full="images/01.jpeg" data-title="piece 01" data-text="Add your description here.\n\nMedium, year, notes.">
+        <img src="images/01.jepg" alt="piece 01 thumbnail">
+      </button>
+
+      <button class="thumb" style="--d: calc(var(--stagger-delay) * 1);" data-full="images/02.jpeg" data-title="piece 02" data-text="Add your description here.\n\nAnything you want.">
+        <img src="images/02.jpeg" alt="piece 02 thumbnail">
+      </button>
+
+      <button class="thumb" style="--d: calc(var(--stagger-delay) * 2);" data-full="images/03.jpeg" data-title="piece 03" data-text="Add your description here.">
+        <img src="images/03.jpeg" alt="piece 03 thumbnail">
+      </button>
+
+      <button class="thumb" style="--d: calc(var(--stagger-delay) * 3);" data-full="images/04.jpeg" data-title="piece 04" data-text="Add your description here.">
+        <img src="images/04.jpeg" alt="piece 04 thumbnail">
+      </button>
+
+      <button class="thumb" style="--d: calc(var(--stagger-delay) * 4);" data-full="images/05.jpeg" data-title="piece 05" data-text="Add your description here.">
+        <img src="images/05.jpeg" alt="piece 05 thumbnail">
+      </button>
+    </section>
+  </main>
+
+  <!-- Viewer -->
+  <div class="viewer" id="viewer" aria-hidden="true" role="dialog" aria-label="image viewer">
+    <div class="panel" role="document">
+      <div class="viewerImage">
+        <img id="viewerImg" src="" alt="">
+      </div>
+
+      <aside class="info" aria-label="image details">
+        <div class="infoTop">
+          <h2 class="title" id="viewerTitle">piece</h2>
+          <button class="closeBtn" id="closeBtn" aria-label="close viewer">×</button>
+        </div>
+        <p class="meta" id="viewerText"></p>
+        <div class="hint">click outside or press esc to close</div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    /*
+      ====== HOW TO TUNE TIMINGS ======
+      In :root (CSS):
+        --fade-duration: 900ms;   // fade-in length per image
+        --stagger-delay: 250ms;   // wait between images
+    */
+
+    const viewer = document.getElementById("viewer");
+    const viewerImg = document.getElementById("viewerImg");
+    const viewerTitle = document.getElementById("viewerTitle");
+    const viewerText = document.getElementById("viewerText");
+    const closeBtn = document.getElementById("closeBtn");
+
+    function openViewer({ full, title, text, alt }) {
+      viewerImg.src = full;
+      viewerImg.alt = alt || title || "gallery image";
+      viewerTitle.textContent = title || "piece";
+      viewerText.textContent = text || "";
+      viewer.setAttribute("aria-hidden", "false");
+      // prevent background scroll
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeViewer() {
+      viewer.setAttribute("aria-hidden", "true");
+      viewerImg.src = "";
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+
+    // Click a thumbnail
+    document.querySelectorAll(".thumb").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        openViewer({
+          full: btn.dataset.full,
+          title: btn.dataset.title,
+          text: btn.dataset.text,
+          alt: btn.querySelector("img")?.alt
+        });
+      });
+    });
+
+    // Close actions
+    closeBtn.addEventListener("click", closeViewer);
+
+    // click outside panel closes
+    viewer.addEventListener("click", (e) => {
+      if (e.target === viewer) closeViewer();
+    });
+
+    // ESC closes
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && viewer.getAttribute("aria-hidden") === "false") {
+        closeViewer();
+      }
+    });
+  </script>
+</body>
+</html>
