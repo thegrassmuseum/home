@@ -11,7 +11,6 @@
       height: 100%;
       background: white;
       color: black;
-      /* Use a monospace stack that usually renders box drawing correctly */
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
                    "Liberation Mono", "DejaVu Sans Mono", "Courier New", monospace;
     }
@@ -22,26 +21,52 @@
       justify-content: center;
     }
 
+    /* stage wraps the PRE so we can overlay invisible clickable areas */
+    #stage {
+      position: relative;
+      display: inline-block;   /* fits to pre exactly */
+      --lh: 1.2em;             /* keep in sync with #container line-height */
+    }
+
     /* Put the text in a PRE so spacing/newlines are guaranteed */
     #container {
       font-size: 14px;
-      line-height: 1.2;   /* prevents vertical “drift” */
+      line-height: 1.2;        /* prevents vertical “drift” */
       margin: 0;
-      white-space: pre;   /* redundant with <pre>, but harmless */
+      white-space: pre;
       text-align: left;
+      user-select: none;       /* optional: prevents accidental selection */
+    }
+
+    /* Invisible hotspot aligned to the GALLERY box (does not affect layout) */
+    #galleryHotspot {
+      position: absolute;
+      top: 0;                  /* first line of the map */
+      left: 8ch;               /* where the box begins (matches your ASCII indentation) */
+      width: 21ch;             /* width of "┌───────────────────┐" */
+      height: calc(6 * var(--lh)); /* height of the top box (lines 1–6) */
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: none;           /* enabled only when map is fully shown */
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <pre id="container"></pre>
+  <div id="stage">
+    <pre id="container"></pre>
+    <a id="galleryHotspot" href="gallery.html" aria-label="Enter Gallery"></a>
+  </div>
 
-<script>
-  const container = document.getElementById("container");
+  <script>
+    const container = document.getElementById("container");
+    const galleryHotspot = document.getElementById("galleryHotspot");
 
-  const introText = "welcome to the grass museum";
-  const enteringText = "entering...";
+    const introText = "welcome to the grass museum";
+    const enteringText = "entering...";
 
-  const asciiMap =
+    const asciiMap =
 ".       ┌───────────────────┐       .\n" +
 "        │                   │\n" +
 "        │      GALLERY      │\n" +
@@ -62,70 +87,111 @@
 "        │                   │\n" +
 ".       └───────────────────┘       .";
 
-  let currentInterval = null;
-  let skipped = false;
+    // Speeds (ms per character). Adjust to taste.
+    const MAP_SPEED = 1;     // progressive but fast
+    const ERASE_FAST = 1;    // fast erase for transitions
 
-  function clearTyping() {
-    if (currentInterval) {
-      clearInterval(currentInterval);
-      currentInterval = null;
+    let currentInterval = null;
+    let atMap = false;
+    let transitioning = false;
+
+    function clearTyping() {
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
     }
-  }
 
-  function skipToMap() {
-    if (skipped) return;
-    skipped = true;
-    clearTyping();
-    container.textContent = asciiMap;
-  }
+    function setHotspotsEnabled(enabled) {
+      galleryHotspot.style.display = enabled ? "block" : "none";
+      galleryHotspot.style.pointerEvents = enabled ? "auto" : "none";
+    }
 
-  function typeIn(text, speed, callback) {
-    clearTyping();
-    container.textContent = "";
-    let i = 0;
-    currentInterval = setInterval(() => {
-      container.textContent += text[i] ?? "";
-      i++;
-      if (i >= text.length) {
-        clearTyping();
-        if (callback) setTimeout(callback, 400);
-      }
-    }, speed);
-  }
+    function showMapInstant() {
+      clearTyping();
+      container.textContent = asciiMap;
+      atMap = true;
+      transitioning = false;
+      setHotspotsEnabled(true);
+    }
 
-  function typeOut(speed, callback) {
-    clearTyping();
-    let text = container.textContent;
-    let i = text.length;
-    currentInterval = setInterval(() => {
-      text = text.slice(0, i - 1);
-      container.textContent = text;
-      i--;
-      if (i <= 0) {
-        clearTyping();
-        if (callback) setTimeout(callback, 300);
-      }
-    }, speed);
-  }
+    function typeIn(text, speed, callback) {
+      clearTyping();
+      container.textContent = "";
+      let i = 0;
+      currentInterval = setInterval(() => {
+        container.textContent += text[i] ?? "";
+        i++;
+        if (i >= text.length) {
+          clearTyping();
+          if (callback) setTimeout(callback, 700);
+        }
+      }, Math.max(0, speed));
+    }
 
-  // INPUT LISTENERS (Enter, click, tap)
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") skipToMap();
-  });
+    function typeOut(speed, callback) {
+      clearTyping();
+      let text = container.textContent;
+      let i = text.length;
+      currentInterval = setInterval(() => {
+        text = text.slice(0, i - 1);
+        container.textContent = text;
+        i--;
+        if (i <= 0) {
+          clearTyping();
+          if (callback) setTimeout(callback, 120);
+        }
+      }, Math.max(0, speed));
+    }
 
-  document.addEventListener("click", skipToMap);
-  document.addEventListener("touchstart", skipToMap, { passive: true });
+    // Skip intro only BEFORE the map is fully shown (Enter, click, tap)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !atMap && !transitioning) showMapInstant();
+    });
 
-  // ORIGINAL SEQUENCE
-  typeIn(introText, 80, () => {
-    typeOut(50, () => {
-      typeIn(enteringText, 50, () => {
-        typeOut(50, () => {
-          typeIn(asciiMap, 0.5, null);
+    document.addEventListener("click", () => {
+      if (!atMap && !transitioning) showMapInstant();
+    });
+
+    document.addEventListener("touchstart", () => {
+      if (!atMap && !transitioning) showMapInstant();
+    }, { passive: true });
+
+    // Gallery hotspot: fast erase, show "entering gallery...", then redirect
+    galleryHotspot.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (!atMap || transitioning) return;
+
+      transitioning = true;
+      setHotspotsEnabled(false);
+
+      typeOut(ERASE_FAST, () => {
+        typeIn("entering gallery...", 35, () => {
+          setTimeout(() => {
+            window.location.href = galleryHotspot.getAttribute("href");
+          }, 250);
         });
       });
     });
-  });
-</script>
+
+    // Start with hotspots disabled
+    setHotspotsEnabled(false);
+
+    // Intro sequence, then TYPE the map in progressively
+    typeIn(introText, 80, () => {
+      typeOut(50, () => {
+        typeIn(enteringText, 50, () => {
+          typeOut(50, () => {
+            // THIS is the key fix: type the map in, then enable hotspot
+            typeIn(asciiMap, MAP_SPEED, () => {
+              atMap = true;
+              transitioning = false;
+              setHotspotsEnabled(true);
+            });
+          });
+        });
+      });
+    });
+  </script>
 </body>
 </html>
