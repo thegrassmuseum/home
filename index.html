@@ -24,27 +24,55 @@
     /* stage wraps the PRE so we can overlay invisible clickable areas */
     #stage {
       position: relative;
-      display: inline-block;   /* fits to pre exactly */
-      --lh: 1.2em;             /* keep in sync with #container line-height */
+      display: inline-block;
+      --lh: 1.2em; /* keep in sync with #container line-height */
     }
 
     /* Put the text in a PRE so spacing/newlines are guaranteed */
     #container {
       font-size: 14px;
-      line-height: 1.2;        /* prevents vertical “drift” */
+      line-height: 1.2; /* prevents vertical “drift” */
       margin: 0;
       white-space: pre;
       text-align: left;
-      user-select: none;       /* optional: prevents accidental selection */
+      user-select: none; /* optional: prevents accidental selection */
     }
 
     /* Invisible hotspot aligned to the GALLERY box (does not affect layout) */
     #galleryHotspot {
       position: absolute;
-      top: 0;                  /* first line of the map */
-      left: 8ch;               /* where the box begins (matches your ASCII indentation) */
-      width: 21ch;             /* width of "┌───────────────────┐" */
-      height: calc(6 * var(--lh)); /* height of the top box (lines 1–6) */
+      top: 0;
+      left: 6ch;
+      width: 21ch;
+      height: calc(6 * var(--lh));
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: none;           /* enabled only when map is fully shown */
+      pointer-events: none;
+    }
+
+    /* Invisible hotspot aligned to the GIFT SHOP box (does not affect layout) */
+    #giftHotspot {
+      position: absolute;
+      top: calc(11 * var(--lh));
+      left: 6ch;
+      width: 21ch;
+      height: calc(6 * var(--lh));
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: none;           /* enabled only when map is fully shown */
+      pointer-events: none;
+    }
+
+    /* Invisible hotspot aligned to the GARDEN label (does not affect layout) */
+    #gardenHotspot {
+      position: absolute;
+      top: calc(7.5 * var(--lh));
+      left: 27ch;
+      width: 6ch;
+      height: calc(1 * var(--lh));
       background: transparent;
       cursor: pointer;
       text-decoration: none;
@@ -53,15 +81,20 @@
     }
   </style>
 </head>
+
 <body>
   <div id="stage">
     <pre id="container"></pre>
     <a id="galleryHotspot" href="gallery.html" aria-label="Enter Gallery"></a>
+    <a id="giftHotspot" href="gift-shop.html" aria-label="Enter Gift Shop"></a>
+    <a id="gardenHotspot" href="garden.html" aria-label="Enter Garden"></a>
   </div>
 
   <script>
     const container = document.getElementById("container");
     const galleryHotspot = document.getElementById("galleryHotspot");
+    const giftHotspot = document.getElementById("giftHotspot");
+    const gardenHotspot = document.getElementById("gardenHotspot");
 
     const introText = "welcome to the grass museum";
     const enteringText = "entering...";
@@ -105,6 +138,12 @@
     function setHotspotsEnabled(enabled) {
       galleryHotspot.style.display = enabled ? "block" : "none";
       galleryHotspot.style.pointerEvents = enabled ? "auto" : "none";
+
+      giftHotspot.style.display = enabled ? "block" : "none";
+      giftHotspot.style.pointerEvents = enabled ? "auto" : "none";
+
+      gardenHotspot.style.display = enabled ? "block" : "none";
+      gardenHotspot.style.pointerEvents = enabled ? "auto" : "none";
     }
 
     function showMapInstant() {
@@ -144,6 +183,20 @@
       }, Math.max(0, speed));
     }
 
+    function transitionTo(href, message) {
+      if (!atMap || transitioning) return;
+      transitioning = true;
+      setHotspotsEnabled(false);
+
+      typeOut(ERASE_FAST, () => {
+        typeIn(message, 35, () => {
+          setTimeout(() => {
+            window.location.href = href;
+          }, 250);
+        });
+      });
+    }
+
     // Skip intro only BEFORE the map is fully shown (Enter, click, tap)
     document.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !atMap && !transitioning) showMapInstant();
@@ -157,21 +210,20 @@
       if (!atMap && !transitioning) showMapInstant();
     }, { passive: true });
 
-    // Gallery hotspot: fast erase, show "entering gallery...", then redirect
+    // Hotspots: fast erase, show message, then redirect
     galleryHotspot.addEventListener("click", (e) => {
       e.preventDefault();
-      if (!atMap || transitioning) return;
+      transitionTo(galleryHotspot.getAttribute("href"), "entering gallery...");
+    });
 
-      transitioning = true;
-      setHotspotsEnabled(false);
+    giftHotspot.addEventListener("click", (e) => {
+      e.preventDefault();
+      transitionTo(giftHotspot.getAttribute("href"), "entering gift shop...");
+    });
 
-      typeOut(ERASE_FAST, () => {
-        typeIn("entering gallery...", 35, () => {
-          setTimeout(() => {
-            window.location.href = galleryHotspot.getAttribute("href");
-          }, 250);
-        });
-      });
+    gardenHotspot.addEventListener("click", (e) => {
+      e.preventDefault();
+      transitionTo(gardenHotspot.getAttribute("href"), "entering garden...");
     });
 
     // Start with hotspots disabled
@@ -182,7 +234,6 @@
       typeOut(50, () => {
         typeIn(enteringText, 50, () => {
           typeOut(50, () => {
-            // THIS is the key fix: type the map in, then enable hotspot
             typeIn(asciiMap, MAP_SPEED, () => {
               atMap = true;
               transitioning = false;
